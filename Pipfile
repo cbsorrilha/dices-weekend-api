@@ -10,6 +10,8 @@ Flask = "*"
 Flask-SQLAlchemy = "*"
 PyMySQL = "*"
 Python-dotenv = "*"
+Marshmallow = "*"
+Flask-Restful = "*"
 
 [requires]
 python_version = "3.8"
