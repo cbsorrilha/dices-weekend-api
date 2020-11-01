@@ -12,6 +12,7 @@ PyMySQL = "*"
 Python-dotenv = "*"
 Marshmallow = "*"
 Flask-Restful = "*"
+flask-cors = "*"
 
 [requires]
 python_version = "3.8"
