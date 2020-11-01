@@ -11,8 +11,8 @@ Flask-SQLAlchemy = "*"
 PyMySQL = "*"
 Python-dotenv = "*"
 Marshmallow = "*"
-Flask-Restful = "*"
 flask-cors = "*"
+werkzeug = "==0.16.1"
 
 [requires]
 python_version = "3.8"

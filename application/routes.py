@@ -1,11 +1,14 @@
 from flask import request, render_template, make_response
 from datetime import datetime as dt
 from flask import current_app as app
+from flask_restplus import abort, Api, Resource
 from .models import db, Result, Dice
 from functools import reduce
 from random import randint
 from operator import add
 from marshmallow import Schema, fields
+
+api = Api(app)
 
 
 class DiceSchema(Schema):
@@ -54,56 +57,62 @@ def generate_individual_results(dices):
     return with_results
 
 
-@app.route('/create', methods=['POST'])
-def create_dices():
-    """Create a dice result post."""
-    request.get_json(force=True)
-    name = request.json.get('name')
-    modifier = request.json.get('modifier')
-    mode = request.json.get('mode')
-    dices = request.json.get('dices')
+@api.route('/dice')
+class DiceRoute(Resource):
+    def get(self):
+        """List dices results."""
+        limit = 4
+        argLimit = request.args.get('limit')
+        if (argLimit):
+            limit = argLimit
+        results = Result.query.order_by(
+            Result.created.desc()).limit(limit).all()
+        schema = ResultSchema(many=True)
+        complete_results = list()
+        for result in results:
+            dices = Dice.query.filter_by(resultId=result.id).all()
+            result.dices = dices
+            complete_results.append(result)
+        return {'results': schema.dump(complete_results)}
 
-    if name and dices and len(dices) > 0 and (mode == 'sum' or mode == 'minmax'):
-        individual_results = generate_individual_results(dices)
-        new_result = Result(
-            name=name,
-            modifier=modifier,
-            created=dt.now(),
-            result=generate_result(individual_results, mode, modifier),
-        )
+    def post(self):
+        """Create a dice result post."""
+        request.get_json(force=True)
+        name = request.json.get('name')
+        modifier = request.json.get('modifier')
+        mode = request.json.get('mode')
+        dices = request.json.get('dices')
+        try:
+            if name == False or name == None:
+                raise TypeError('name is required')
+            if dices == False or dices == None or not isinstance(dices, list) or len(dices) == 0:
+                raise TypeError('dices is required and must an array')
+            if mode != 'sum' and mode != 'minmax' and mode != None:
+                raise TypeError('mode must be sum or minmax or null')
 
-        # Adds new User record to database
-        db.session.add(new_result)
-
-        db.session.commit()  # Commits all changes
-
-        for dice in individual_results:
-            new_dice = Dice(
-                resultId=new_result.id,
-                diceType=dice['diceType'],
-                value=dice['value'],
+            individual_results = generate_individual_results(dices)
+            new_result = Result(
+                name=name,
+                modifier=modifier,
+                created=dt.now(),
+                result=generate_result(individual_results, mode, modifier),
             )
-            db.session.add(new_dice)
 
-        db.session.commit()
+            # Adds new User record to database
+            db.session.add(new_result)
 
-        return {'result': object_as_dict(new_result), 'dices': individual_results}
+            db.session.commit()  # Commits all changes
 
+            for dice in individual_results:
+                new_dice = Dice(
+                    resultId=new_result.id,
+                    diceType=dice['diceType'],
+                    value=dice['value'],
+                )
+                db.session.add(new_dice)
 
-@app.route('/list', methods=['GET'])
-def list_dices():
-    """List dices results."""
-    limit = 4
-    argLimit = request.args.get('limit')
-    if (argLimit):
-        limit = argLimit
+            db.session.commit()
 
-    results = Result.query.order_by(Result.created.desc()).limit(limit).all()
-    schema = ResultSchema(many=True)
-
-    complete_results = list()
-    for result in results:
-        dices = Dice.query.filter_by(resultId=result.id).all()
-        result.dices = dices
-        complete_results.append(result)
-    return {'results': schema.dump(complete_results)}
+            return {'result': object_as_dict(new_result), 'dices': individual_results}
+        except TypeError as err:
+            abort(403, err)
