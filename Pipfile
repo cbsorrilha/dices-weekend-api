@@ -14,6 +14,7 @@ Marshmallow = "*"
 flask-cors = "*"
 werkzeug = "==0.16.1"
 pytest = "*"
+flask-restplus = "*"
 
 [requires]
 python_version = "3.8"
