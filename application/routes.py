@@ -34,5 +34,5 @@ class DiceController(Resource):
             new_result, individual_results = DiceService.create(
                 name=name, modifier=modifier, mode=mode, dices=dices)
             return {'result': schema.dump(new_result), 'dices': dicesSchema.dump(individual_results)}
-        except TypeError(err):
+        except TypeError as err:
             abort(403, err)
